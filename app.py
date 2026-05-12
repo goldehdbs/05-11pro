@@ -21,8 +21,9 @@ def load_lifestyle_data():
     """데이터셋 1: Sleep Health and Lifestyle"""
     try:
         df = pd.read_csv('Sleep_health_and_lifestyle_dataset.csv')
-    except:
-        return pd.DataFrame() # 파일이 없을 경우 빈 데이터프레임 반환
+    except Exception as e:
+        st.error(f"첫 번째 파일 로드 에러: {e}")
+        return pd.DataFrame()
 
     # 한글화 매핑
     bmi_map = {'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'}
@@ -52,8 +53,10 @@ def load_lifestyle_data():
 def load_efficiency_data():
     """데이터셋 2: Sleep Efficiency"""
     try:
+        # 요청하신 파일명 정확히 반영
         df = pd.read_csv('Sleep_Efficiency.csv')
-    except:
+    except Exception as e:
+        st.error(f"두 번째 파일 로드 에러: {e}")
         return pd.DataFrame()
     
     # 결측치 처리 (0으로 대체)
@@ -63,6 +66,7 @@ def load_efficiency_data():
     df['Smoking status'] = df['Smoking status'].replace({'Yes': '흡연', 'No': '비흡연'})
     df['Gender'] = df['Gender'].replace({'Male': '남성', 'Female': '여성'})
     
+    # 컬럼명 변경
     df = df.rename(columns={
         'Age': '나이', 'Gender': '성별', 'Sleep duration': '수면시간', 
         'Sleep efficiency': '수면효율', 'REM sleep percentage': '렘수면_비율',
@@ -73,6 +77,7 @@ def load_efficiency_data():
     })
     return df
 
+# 데이터 불러오기
 df_life = load_lifestyle_data()
 df_eff = load_efficiency_data()
 
@@ -84,9 +89,9 @@ st.sidebar.markdown("두 가지 데이터셋을 바탕으로 현대인의 수면
 
 st.sidebar.markdown("---")
 st.sidebar.info(
-    "**사용된 데이터셋:**\n\n"
-    "1. `Sleep Health and Lifestyle`\n"
-    "2. `Sleep Efficiency`"
+    "**사용된 파일:**\n\n"
+    "1. `Sleep_health_and_lifestyle_dataset.csv`\n"
+    "2. `Sleep_Efficiency.csv`"
 )
 
 # ==========================================
@@ -95,7 +100,7 @@ st.sidebar.info(
 st.title("🌙 현대인 수면 건강 및 효율 심층 분석")
 
 # 탭 생성
-tab1, tab2 = st.tabs(["📊 파트 1: 생활 습관 및 수면 장애 (Lifestyle)", "🛌 파트 2: 수면 효율 및 외부 요인 (Efficiency)"])
+tab1, tab2 = st.tabs(["📊 파트 1: 생활 습관 및 수면 장애", "🛌 파트 2: 수면 효율 및 외부 요인"])
 
 # ------------------------------------------
 # 탭 1: 기존 데이터 (Lifestyle)
@@ -104,7 +109,7 @@ with tab1:
     st.markdown("### 직업, 스트레스, 체중이 수면의 질에 미치는 영향")
     
     if df_life.empty:
-        st.error("`Sleep_health_and_lifestyle_dataset.csv` 파일이 없습니다.")
+        st.warning("`Sleep_health_and_lifestyle_dataset.csv` 파일 데이터를 불러올 수 없습니다. 파일 위치를 확인해주세요.")
     else:
         # KPI
         c1, c2, c3, c4 = st.columns(4)
@@ -123,7 +128,7 @@ with tab1:
             st.plotly_chart(fig1, use_container_width=True)
             
         with r1_c2:
-            fig2 = px.scatter(df_life, x='일일걸음수', y='스트레스지수', color='직업', trendline="ols", opacity=0.7, title="일일 걸음 수와 스트레스의 상관관계")
+            fig2 = px.scatter(df_life, x='일일걸음수', y='스트레스지수', color='직업', opacity=0.7, title="일일 걸음 수와 스트레스의 상관관계")
             st.plotly_chart(fig2, use_container_width=True)
             
         r2_c1, r2_c2 = st.columns(2)
@@ -143,14 +148,14 @@ with tab2:
     st.markdown("### 알코올, 카페인, 운동 등 수면 구조(REM/Deep)에 미치는 요인")
     
     if df_eff.empty:
-        st.error("`Sleep_Efficiency.csv` 파일이 없습니다.")
+        st.warning("`Sleep_Efficiency.csv` 파일 데이터를 불러올 수 없습니다. 파일 위치를 확인해주세요.")
     else:
         # KPI
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("수면 효율 평균", f"{df_eff['수면효율'].mean() * 100:.1f} %")
         c2.metric("깊은 수면(Deep Sleep) 평균", f"{df_eff['깊은수면_비율'].mean():.1f} %")
         c3.metric("평균 중간 각성 횟수", f"{df_eff['각성횟수'].mean():.1f} 회")
-        c4.metric("주당 평균 운동 빈도", f"{df_eff['운동빈도'].mean():.1f} 일")
+        c4.metric("주당 평균 운동 빈도", f"{df_eff['운동빈도'].mean():.1f} 회")
         
         st.markdown("---")
         
@@ -182,7 +187,7 @@ with tab2:
             
         with r4_c2:
             # 운동 빈도와 깊은 수면 비율
-            fig8 = px.scatter(df_eff, x='운동빈도', y='깊은수면_비율', trendline="ols",
+            fig8 = px.scatter(df_eff, x='운동빈도', y='깊은수면_비율', 
                               color='수면효율', color_continuous_scale='Viridis',
                               title="주당 운동 빈도가 깊은 수면(Deep Sleep)에 미치는 영향")
             st.plotly_chart(fig8, use_container_width=True)
@@ -192,7 +197,10 @@ with tab2:
 # ==========================================
 st.markdown("---")
 with st.expander("📁 원본 데이터 테이블 보기"):
-    st.markdown("**1. Lifestyle 데이터셋**")
-    st.dataframe(df_life, use_container_width=True)
-    st.markdown("**2. Sleep Efficiency 데이터셋**")
-    st.dataframe(df_eff, use_container_width=True)
+    st.markdown("**1. Lifestyle 데이터셋 (`Sleep_health_and_lifestyle_dataset.csv`)**")
+    if not df_life.empty:
+        st.dataframe(df_life, use_container_width=True)
+    
+    st.markdown("**2. Sleep Efficiency 데이터셋 (`Sleep_Efficiency.csv`)**")
+    if not df_eff.empty:
+        st.dataframe(df_eff, use_container_width=True)
