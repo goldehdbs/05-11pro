@@ -16,7 +16,6 @@ st.set_page_config(
 # ==========================================
 # 2. 데이터 로드 및 전처리
 # ==========================================
-# 혈압 수치(예: 120/80)를 4단계 카테고리로 분류하는 함수
 def categorize_bp(bp_str):
     try:
         sys, dia = map(int, str(bp_str).split('/'))
@@ -39,13 +38,8 @@ def load_data_1():
         
     df = pd.read_csv(file_path)
     
-    # 혈압 데이터 카테고리화 적용
     df['Blood Pressure'] = df['Blood Pressure'].apply(categorize_bp)
-    
-    # 카테고리 한글 변환
     df['BMI Category'] = df['BMI Category'].replace({'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'})
-    
-    # 결측치 처리 및 변환
     df['Sleep Disorder'] = df['Sleep Disorder'].fillna('없음')
     df['Sleep Disorder'] = df['Sleep Disorder'].replace({'None': '없음', 'Sleep Apnea': '수면 무호흡증', 'Insomnia': '불면증'})
     
@@ -125,7 +119,6 @@ with tab1:
     if df1.empty:
         st.warning("조건에 맞는 데이터가 없습니다. 좌측 필터를 조절해 주세요.")
     else:
-        # 상단 Metric 지표
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("선택된 모집단", f"{len(df1)}명", f"전체 {len(df1_raw)}명 기준", delta_color="off")
         c2.metric("평균 수면 시간", f"{df1['수면시간'].mean():.1f}시간")
@@ -147,17 +140,14 @@ with tab1:
         with col_sel2:
             avg_dynamic = df1.groupby(target_category)[['수면시간', '수면의질']].mean().reset_index()
             
-            # 그래프 가독성을 위한 정렬 처리
             if target_category == '스트레스지수':
                 avg_dynamic = avg_dynamic.sort_values(target_category, ascending=False)
                 avg_dynamic[target_category] = avg_dynamic[target_category].astype(str) + "점"
             else:
-                # Plotly 가로 막대 그래프는 ascending=True 여야 가장 긴 막대가 위에 옴
                 avg_dynamic = avg_dynamic.sort_values('수면시간', ascending=True)
 
-            # [수정됨] x축과 y축을 반전시켜 그래프를 옆으로 눕힘 (orientation='h')
             fig_dyn = px.bar(avg_dynamic, x='수면시간', y=target_category, orientation='h',
-                             color='수면의질', text_auto='.1f', color_continuous_scale='Blues',
+                             color='수면의질', text_auto='.1f', color_continuous_scale='Turbo',
                              title=f"[{target_category}]에 따른 평균 수면 시간 (색상: 수면의 질)")
             fig_dyn.update_layout(xaxis_title="평균 수면 시간 (h)", yaxis_title="")
             st.plotly_chart(fig_dyn, use_container_width=True)
@@ -166,8 +156,9 @@ with tab1:
         
         st.subheader("⚖️ 체중(BMI) 분류별 수면 장애 현황")
         bmi_data = df1.groupby(['BMI분류', '수면장애']).size().reset_index(name='인원수')
+        
         fig3 = px.bar(bmi_data, x='BMI분류', y='인원수', color='수면장애', barmode='group', text_auto=True,
-                      color_discrete_map={'없음': '#94a3b8', '불면증': '#f59e0b', '수면 무호흡증': '#ef4444'})
+                      color_discrete_map={'없음': '#22c55e', '불면증': '#eab308', '수면 무호흡증': '#ef4444'})
         st.plotly_chart(fig3, use_container_width=True)
 
 # ------------------------------------------
@@ -190,8 +181,10 @@ with tab2:
         with col_eff1:
             st.subheader("🛌 평균 수면 단계 구성")
             stages = pd.DataFrame({'단계': ['깊은 수면', 'REM 수면', '얕은 수면'], '비중': [df2['깊은수면비율'].mean(), df2['REM비율'].mean(), df2['얕은수면비율'].mean()]})
-            fig6 = px.pie(stages, values='비중', names='단계', hole=0.4, color_discrete_sequence=['#10b981', '#38bdf8', '#64748b'])
-            fig6.update_traces(textinfo='percent+label')
+            
+            fig6 = px.pie(stages, values='비중', names='단계', hole=0.4, 
+                          color_discrete_sequence=['#3b82f6', '#8b5cf6', '#f59e0b'])
+            fig6.update_traces(textinfo='percent+label', textfont_size=14)
             st.plotly_chart(fig6, use_container_width=True)
             
         with col_eff2:
@@ -202,6 +195,23 @@ with tab2:
             avg_factor['수면효율'] = (avg_factor['수면효율'] * 100).round(1)
             
             fig_factor = px.line(avg_factor, x=factor, y='수면효율', markers=True, text='수면효율')
-            fig_factor.update_traces(textposition='top center', line_color='#a855f7', marker=dict(size=10))
+            fig_factor.update_traces(textposition='top center', line_color='#ec4899', 
+                                     marker=dict(size=12, color='#ec4899'), textfont_size=14)
             fig_factor.update_layout(yaxis_title="수면 효율 (%)", xaxis_title=f"{factor} (잔/회)")
+            
+            min_y = avg_factor['수면효율'].min() - 3
+            max_y = avg_factor['수면효율'].max() + 3
+            fig_factor.update_layout(yaxis=dict(range=[min_y, max_y]))
+            
             st.plotly_chart(fig_factor, use_container_width=True)
+
+        st.markdown("---")
+        
+        # [추가된 부분] 흡연 여부와 각성 횟수 그래프 복구
+        st.subheader("🚬 흡연 여부와 평균 각성 횟수")
+        avg_awake = df2.groupby('흡연여부')['각성횟수'].mean().reset_index()
+        fig7 = px.bar(avg_awake, x='흡연여부', y='각성횟수', color='흡연여부', text_auto='.1f',
+                      color_discrete_map={'비흡연': '#38bdf8', '흡연': '#ef4444'},
+                      title="흡연이 수면 중 깨는 횟수에 미치는 영향")
+        fig7.update_layout(xaxis_title="", yaxis_title="평균 자다 깨는 횟수 (회)")
+        st.plotly_chart(fig7, use_container_width=True)
