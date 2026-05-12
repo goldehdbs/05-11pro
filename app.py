@@ -188,30 +188,51 @@ with tab2:
             st.plotly_chart(fig6, use_container_width=True)
             
         with col_eff2:
-            st.subheader("⚡ 외부 요인별 수면 효율 분석")
-            factor = st.selectbox("분석할 외부 요인을 선택하세요:", ['알코올', '운동빈도'], index=0)
+            st.subheader("⚡ 외부 요인별 수면 지표 분석")
             
-            avg_factor = df2.groupby(factor)[['수면효율', '깊은수면비율']].mean().reset_index()
-            avg_factor['수면효율'] = (avg_factor['수면효율'] * 100).round(1)
+            # [수정됨] 3가지 옵션을 모두 통합한 셀렉트 박스
+            factor_choice = st.selectbox(
+                "분석할 외부 요인을 선택하세요:", 
+                ['알코올 섭취량 (수면 효율)', '운동 빈도 (깊은 수면 비중)', '흡연 여부 (각성 횟수)'], 
+                index=0
+            )
             
-            fig_factor = px.line(avg_factor, x=factor, y='수면효율', markers=True, text='수면효율')
-            fig_factor.update_traces(textposition='top center', line_color='#ec4899', 
-                                     marker=dict(size=12, color='#ec4899'), textfont_size=14)
-            fig_factor.update_layout(yaxis_title="수면 효율 (%)", xaxis_title=f"{factor} (잔/회)")
-            
-            min_y = avg_factor['수면효율'].min() - 3
-            max_y = avg_factor['수면효율'].max() + 3
-            fig_factor.update_layout(yaxis=dict(range=[min_y, max_y]))
-            
-            st.plotly_chart(fig_factor, use_container_width=True)
+            # 1. 알코올 선택 시
+            if '알코올' in factor_choice:
+                avg_factor = df2.groupby('알코올')['수면효율'].mean().reset_index()
+                avg_factor['수면효율'] = (avg_factor['수면효율'] * 100).round(1)
+                
+                fig_factor = px.line(avg_factor, x='알코올', y='수면효율', markers=True, text='수면효율')
+                fig_factor.update_traces(textposition='top center', line_color='#ec4899', marker=dict(size=12, color='#ec4899'), textfont_size=14)
+                fig_factor.update_layout(yaxis_title="수면 효율 (%)", xaxis_title="알코올 (잔/회)")
+                
+                # Y축 여백 설정
+                min_y = avg_factor['수면효율'].min() - 3
+                max_y = avg_factor['수면효율'].max() + 3
+                fig_factor.update_layout(yaxis=dict(range=[min_y, max_y]))
 
-        st.markdown("---")
-        
-        # [추가된 부분] 흡연 여부와 각성 횟수 그래프 복구
-        st.subheader("🚬 흡연 여부와 평균 각성 횟수")
-        avg_awake = df2.groupby('흡연여부')['각성횟수'].mean().reset_index()
-        fig7 = px.bar(avg_awake, x='흡연여부', y='각성횟수', color='흡연여부', text_auto='.1f',
-                      color_discrete_map={'비흡연': '#38bdf8', '흡연': '#ef4444'},
-                      title="흡연이 수면 중 깨는 횟수에 미치는 영향")
-        fig7.update_layout(xaxis_title="", yaxis_title="평균 자다 깨는 횟수 (회)")
-        st.plotly_chart(fig7, use_container_width=True)
+            # 2. 운동빈도 선택 시
+            elif '운동' in factor_choice:
+                avg_factor = df2.groupby('운동빈도')['깊은수면비율'].mean().reset_index()
+                avg_factor['깊은수면비율'] = avg_factor['깊은수면비율'].round(1)
+                
+                fig_factor = px.line(avg_factor, x='운동빈도', y='깊은수면비율', markers=True, text='깊은수면비율')
+                fig_factor.update_traces(textposition='top center', line_color='#10b981', marker=dict(size=12, color='#10b981'), textfont_size=14)
+                fig_factor.update_layout(yaxis_title="깊은 수면 비중 (%)", xaxis_title="운동빈도 (회/주)")
+                
+                min_y = avg_factor['깊은수면비율'].min() - 3
+                max_y = avg_factor['깊은수면비율'].max() + 3
+                fig_factor.update_layout(yaxis=dict(range=[min_y, max_y]))
+
+            # 3. 흡연여부 선택 시
+            else:
+                avg_factor = df2.groupby('흡연여부')['각성횟수'].mean().reset_index()
+                avg_factor['각성횟수'] = avg_factor['각성횟수'].round(1)
+                
+                # 흡연/비흡연은 텍스트 형태이므로 보기 편한 막대(Bar) 그래프 사용
+                fig_factor = px.bar(avg_factor, x='흡연여부', y='각성횟수', text_auto='.1f',
+                                    color='흡연여부', color_discrete_map={'비흡연': '#38bdf8', '흡연': '#ef4444'})
+                fig_factor.update_traces(textfont_size=16)
+                fig_factor.update_layout(yaxis_title="평균 각성 횟수 (회)", xaxis_title="흡연여부 (흡연/비흡연)")
+
+            st.plotly_chart(fig_factor, use_container_width=True)
