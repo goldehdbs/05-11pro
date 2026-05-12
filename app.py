@@ -13,7 +13,7 @@ st.set_page_config(
 )
 
 # ==========================================
-# 2. 데이터 로드 및 전처리 (안전성 강화)
+# 2. 데이터 로드 및 전처리 (안전성 강화 및 에러 수정)
 # ==========================================
 @st.cache_data
 def load_data_1():
@@ -26,7 +26,7 @@ def load_data_1():
     # 카테고리 한글 변환
     df['BMI Category'] = df['BMI Category'].replace({'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'})
     
-    # 결측치 안전 처리 후 변환
+    # 결측치 처리 및 변환
     df['Sleep Disorder'] = df['Sleep Disorder'].fillna('없음')
     df['Sleep Disorder'] = df['Sleep Disorder'].replace({'None': '없음', 'Sleep Apnea': '수면 무호흡증', 'Insomnia': '불면증'})
     
@@ -49,15 +49,16 @@ def load_data_2():
         return pd.DataFrame()
         
     df = pd.read_csv(file_path)
-    # inplace=True 대신 재할당 방식을 사용하여 메모리/캐시 오류 방지
     df = df.fillna(0)
     
     df['Smoking status'] = df['Smoking status'].replace({'Yes': '흡연', 'No': '비흡연'})
     
+    # [수정됨] 'Smoking status': '흡연여부' 맵핑이 추가되었습니다!
     return df.rename(columns={
         'Sleep efficiency': '수면효율', 'REM sleep percentage': 'REM비율', 
         'Deep sleep percentage': '깊은수면비율', 'Light sleep percentage': '얕은수면비율', 
-        'Awakenings': '각성횟수', 'Alcohol consumption': '알코올', 'Exercise frequency': '운동빈도'
+        'Awakenings': '각성횟수', 'Alcohol consumption': '알코올', 'Exercise frequency': '운동빈도',
+        'Smoking status': '흡연여부' 
     })
 
 # 예외 처리를 통해 에러 발생 시 앱이 죽지 않도록 방지
