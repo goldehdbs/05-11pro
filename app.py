@@ -7,200 +7,144 @@ import plotly.graph_objects as go
 # 1. 페이지 기본 설정
 # ==========================================
 st.set_page_config(
-    page_title="수면 & 라이프스타일 종합 대시보드",
-    page_icon="🌙",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="한눈에 보는 수면 건강 리포트",
+    page_icon="📊",
+    layout="wide"
 )
 
 # ==========================================
-# 2. 데이터 로드 및 전처리
+# 2. 데이터 로드 및 전처리 함수
 # ==========================================
 @st.cache_data
-def load_lifestyle_data():
-    """데이터셋 1: Sleep Health and Lifestyle"""
+def load_data_1():
     try:
         df = pd.read_csv('Sleep_health_and_lifestyle_dataset.csv')
-    except Exception as e:
-        st.error(f"첫 번째 파일 로드 에러: {e}")
-        return pd.DataFrame()
-
-    # 한글화 매핑
-    bmi_map = {'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'}
-    df['BMI Category'] = df['BMI Category'].map(bmi_map).fillna(df['BMI Category'])
-    
-    disorder_map = {'None': '없음', 'Sleep Apnea': '수면 무호흡증', 'Insomnia': '불면증'}
-    df['Sleep Disorder'] = df['Sleep Disorder'].map(disorder_map).fillna('없음')
-    
-    occ_map = {
-        'Software Engineer': '소프트웨어 엔지니어', 'Doctor': '의사', 
-        'Sales Representative': '영업 대표', 'Teacher': '교사', 
-        'Nurse': '간호사', 'Engineer': '엔지니어', 
-        'Accountant': '회계사', 'Scientist': '과학자', 
-        'Lawyer': '변호사', 'Salesperson': '영업 사원', 'Manager': '관리자'
-    }
-    df['Occupation'] = df['Occupation'].map(occ_map).fillna(df['Occupation'])
-    
-    # 컬럼명 변경
-    df = df.rename(columns={
-        'Occupation': '직업', 'Sleep Duration': '수면시간', 'Quality of Sleep': '수면의질',
-        'Daily Steps': '일일걸음수', 'Stress Level': '스트레스지수', 'BMI Category': 'BMI분류',
-        'Sleep Disorder': '수면장애', 'Age': '나이', 'Gender': '성별'
-    })
-    return df
+        # 한글 매핑 및 변환
+        df['BMI Category'] = df['BMI Category'].replace({'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'})
+        df['Sleep Disorder'] = df['Sleep Disorder'].replace({'None': '없음', 'Sleep Apnea': '수면 무호흡증', 'Insomnia': '불면증'}).fillna('없음')
+        occ_map = {'Software Engineer': '엔지니어', 'Doctor': '의사', 'Sales Representative': '영업직', 'Teacher': '교사', 'Nurse': '간호사', 'Engineer': '엔지니어', 'Accountant': '회계사', 'Scientist': '과학자', 'Lawyer': '변호사', 'Salesperson': '영업직', 'Manager': '관리자'}
+        df['Occupation'] = df['Occupation'].map(occ_map).fillna(df['Occupation'])
+        return df.rename(columns={'Occupation': '직업', 'Sleep Duration': '수면시간', 'Quality of Sleep': '수면의질', 'Stress Level': '스트레스지수', 'BMI Category': 'BMI분류', 'Sleep Disorder': '수면장애'})
+    except: return pd.DataFrame()
 
 @st.cache_data
-def load_efficiency_data():
-    """데이터셋 2: Sleep Efficiency"""
+def load_data_2():
     try:
-        # 요청하신 파일명 정확히 반영
         df = pd.read_csv('Sleep_Efficiency.csv')
-    except Exception as e:
-        st.error(f"두 번째 파일 로드 에러: {e}")
-        return pd.DataFrame()
-    
-    # 결측치 처리 (0으로 대체)
-    df.fillna({'Caffeine consumption': 0, 'Alcohol consumption': 0, 'Exercise frequency': 0}, inplace=True)
-    
-    # 한글화
-    df['Smoking status'] = df['Smoking status'].replace({'Yes': '흡연', 'No': '비흡연'})
-    df['Gender'] = df['Gender'].replace({'Male': '남성', 'Female': '여성'})
-    
-    # 컬럼명 변경
-    df = df.rename(columns={
-        'Age': '나이', 'Gender': '성별', 'Sleep duration': '수면시간', 
-        'Sleep efficiency': '수면효율', 'REM sleep percentage': '렘수면_비율',
-        'Deep sleep percentage': '깊은수면_비율', 'Light sleep percentage': '얕은수면_비율',
-        'Awakenings': '각성횟수', 'Caffeine consumption': '카페인소비량',
-        'Alcohol consumption': '알코올소비량', 'Smoking status': '흡연여부',
-        'Exercise frequency': '운동빈도'
-    })
-    return df
+        df.fillna(0, inplace=True)
+        df['Smoking status'] = df['Smoking status'].replace({'Yes': '흡연', 'No': '비흡연'})
+        return df.rename(columns={'Sleep efficiency': '수면효율', 'REM sleep percentage': 'REM비율', 'Deep sleep percentage': '깊은수면비율', 'Light sleep percentage': '얕은수면비율', 'Awakenings': '각성횟수', 'Alcohol consumption': '알코올', 'Exercise frequency': '운동빈도'})
+    except: return pd.DataFrame()
 
-# 데이터 불러오기
-df_life = load_lifestyle_data()
-df_eff = load_efficiency_data()
+df1 = load_data_1()
+df2 = load_data_2()
 
 # ==========================================
-# 3. 사이드바 구성
+# 3. 메인 UI 구성
 # ==========================================
-st.sidebar.title("🌙 수면 분석 대시보드")
-st.sidebar.markdown("두 가지 데이터셋을 바탕으로 현대인의 수면 건강을 다각도에서 분석합니다.")
+st.title("📊 수면 건강 핵심 데이터 대시보드")
+st.markdown("복잡한 분석 대신 **막대그래프**를 사용하여 주요 수치를 한눈에 비교합니다.")
 
-st.sidebar.markdown("---")
-st.sidebar.info(
-    "**사용된 파일:**\n\n"
-    "1. `Sleep_health_and_lifestyle_dataset.csv`\n"
-    "2. `Sleep_Efficiency.csv`"
-)
-
-# ==========================================
-# 4. 메인 화면 구성 (탭 활용)
-# ==========================================
-st.title("🌙 현대인 수면 건강 및 효율 심층 분석")
-
-# 탭 생성
-tab1, tab2 = st.tabs(["📊 파트 1: 생활 습관 및 수면 장애", "🛌 파트 2: 수면 효율 및 외부 요인"])
+tab1, tab2 = st.tabs(["📉 라이프스타일 분석 (생활 습관)", "💤 수면 효율 분석 (외부 요인)"])
 
 # ------------------------------------------
-# 탭 1: 기존 데이터 (Lifestyle)
+# 탭 1: 생활 습관 (직업, 스트레스, 체중)
 # ------------------------------------------
 with tab1:
-    st.markdown("### 직업, 스트레스, 체중이 수면의 질에 미치는 영향")
-    
-    if df_life.empty:
-        st.warning("`Sleep_health_and_lifestyle_dataset.csv` 파일 데이터를 불러올 수 없습니다. 파일 위치를 확인해주세요.")
-    else:
-        # KPI
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("총 응답자 수", f"{len(df_life)} 명")
-        c2.metric("평균 수면 시간", f"{df_life['수면시간'].mean():.1f} 시간")
-        c3.metric("평균 스트레스 지수", f"{df_life['스트레스지수'].mean():.1f} / 10")
-        c4.metric("평균 일일 걸음 수", f"{int(df_life['일일걸음수'].mean()):,} 보")
+    if not df1.empty:
+        # 상단 지표 (KPI)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("평균 수면 시간", f"{df1['수면시간'].mean():.1f}시간")
+        c2.metric("평균 스트레스 지수", f"{df1['스트레스지수'].mean():.1f}점")
+        c3.metric("평균 수면의 질", f"{df1['수면의질'].mean():.1f}점")
         
         st.markdown("---")
         
-        r1_c1, r1_c2 = st.columns(2)
-        with r1_c1:
-            occ_sleep = df_life.groupby('직업', as_index=False)['수면시간'].mean().sort_values('수면시간', ascending=True)
-            fig1 = px.bar(occ_sleep, x='수면시간', y='직업', orientation='h', color='수면시간', text_auto='.1f', title="직업군별 평균 수면 시간")
-            fig1.update_layout(xaxis_range=[5, 9])
+        col_left, col_right = st.columns(2)
+        
+        with col_left:
+            st.subheader("👨‍💻 직업별 평균 수면 시간")
+            # 막대그래프로 변경
+            avg_sleep = df1.groupby('직업')['수면시간'].mean().reset_index().sort_values('수면시간')
+            fig1 = px.bar(avg_sleep, x='수면시간', y='직업', orientation='h', 
+                          color='수면시간', text_auto='.1f', color_continuous_scale='Blues')
             st.plotly_chart(fig1, use_container_width=True)
-            
-        with r1_c2:
-            fig2 = px.scatter(df_life, x='일일걸음수', y='스트레스지수', color='직업', opacity=0.7, title="일일 걸음 수와 스트레스의 상관관계")
+
+        with col_right:
+            st.subheader("🔥 직업별 평균 스트레스")
+            # 점 대신 막대그래프로 변경하여 비교를 명확하게 함
+            avg_stress = df1.groupby('직업')['스트레스지수'].mean().reset_index().sort_values('스트레스지수')
+            fig2 = px.bar(avg_stress, x='스트레스지수', y='직업', orientation='h', 
+                          color='스트레스지수', text_auto='.1f', color_continuous_scale='Reds')
             st.plotly_chart(fig2, use_container_width=True)
-            
-        r2_c1, r2_c2 = st.columns(2)
-        with r2_c1:
-            fig3 = px.box(df_life, x='수면장애', y='수면의질', color='수면장애', title="수면 장애 유무에 따른 수면의 질")
+
+        st.markdown("---")
+        
+        col_low1, col_low2 = st.columns(2)
+        with col_low1:
+            st.subheader("⚖️ 체중분류별 수면 장애 현황")
+            # 누적 막대그래프로 비중을 한눈에 표시
+            fig3 = px.bar(df1.groupby(['BMI분류', '수면장애']).size().reset_index(name='인원수'), 
+                          x='BMI분류', y='인원수', color='수면장애', barmode='group', text_auto=True)
             st.plotly_chart(fig3, use_container_width=True)
             
-        with r2_c2:
-            bmi_disorder = df_life.groupby(['BMI분류', '수면장애']).size().reset_index(name='count')
-            fig4 = px.bar(bmi_disorder, x='BMI분류', y='count', color='수면장애', barmode='group', title="체중(BMI) 분류별 수면 장애 발생 현황")
+        with col_low2:
+            st.subheader("🌙 수면 장애별 수면의 질 점수")
+            avg_qual = df1.groupby('수면장애')['수면의질'].mean().reset_index()
+            fig4 = px.bar(avg_qual, x='수면장애', y='수면의질', color='수면장애', text_auto='.1f')
             st.plotly_chart(fig4, use_container_width=True)
 
 # ------------------------------------------
-# 탭 2: 신규 데이터 (Sleep Efficiency)
+# 탭 2: 수면 효율 (알코올, 운동, 수면단계)
 # ------------------------------------------
 with tab2:
-    st.markdown("### 알코올, 카페인, 운동 등 수면 구조(REM/Deep)에 미치는 요인")
-    
-    if df_eff.empty:
-        st.warning("`Sleep_Efficiency.csv` 파일 데이터를 불러올 수 없습니다. 파일 위치를 확인해주세요.")
-    else:
-        # KPI
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("수면 효율 평균", f"{df_eff['수면효율'].mean() * 100:.1f} %")
-        c2.metric("깊은 수면(Deep Sleep) 평균", f"{df_eff['깊은수면_비율'].mean():.1f} %")
-        c3.metric("평균 중간 각성 횟수", f"{df_eff['각성횟수'].mean():.1f} 회")
-        c4.metric("주당 평균 운동 빈도", f"{df_eff['운동빈도'].mean():.1f} 회")
-        
+    if not df2.empty:
+        # 상단 지표 (KPI)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("평균 수면 효율", f"{df2['수면효율'].mean()*100:.1f}%")
+        c2.metric("깊은 수면 비중", f"{df2['깊은수면비율'].mean():.1f}%")
+        c3.metric("평균 자다 깨는 횟수", f"{df2['각성횟수'].mean():.1f}회")
+
         st.markdown("---")
+
+        col_eff1, col_eff2 = st.columns(2)
         
-        r3_c1, r3_c2 = st.columns(2)
-        with r3_c1:
-            # 알코올 소비량과 수면 효율
-            fig5 = px.box(df_eff, x='알코올소비량', y='수면효율', color='알코올소비량', 
-                          title="알코올 섭취량과 수면 효율의 관계",
-                          labels={'알코올소비량': '알코올 섭취량 (단위)'})
+        with col_eff1:
+            st.subheader("🍺 알코올 섭취량별 수면 효율")
+            # 섭취량에 따른 평균 효율을 막대로 표시
+            avg_eff = df2.groupby('알코올')['수면효율'].mean().reset_index()
+            avg_eff['수면효율'] = avg_eff['수면효율'] * 100
+            fig5 = px.bar(avg_eff, x='알코올', y='수면효율', text_auto='.1f', 
+                          labels={'알코올': '음주량', '수면효율': '수면 효율 (%)'},
+                          color='수면효율', color_continuous_scale='Purples')
             st.plotly_chart(fig5, use_container_width=True)
-            
-        with r3_c2:
-            # 수면 단계 비율 (도넛 차트)
-            avg_rem = df_eff['렘수면_비율'].mean()
-            avg_deep = df_eff['깊은수면_비율'].mean()
-            avg_light = df_eff['얕은수면_비율'].mean()
-            
-            fig6 = go.Figure(data=[go.Pie(labels=['REM 수면', '깊은 수면(Deep)', '얕은 수면(Light)'], 
-                                          values=[avg_rem, avg_deep, avg_light], hole=.4)])
-            fig6.update_layout(title_text="전체 응답자 평균 수면 단계 비율")
+
+        with col_eff2:
+            st.subheader("🛌 평균 수면 단계 구성")
+            # 파이 차트로 비중을 한눈에 확인
+            stages = pd.DataFrame({
+                '단계': ['깊은 수면', 'REM 수면', '얕은 수면'],
+                '비중': [df2['깊은수면비율'].mean(), df2['REM비율'].mean(), df2['얕은수면비율'].mean()]
+            })
+            fig6 = px.pie(stages, values='비중', names='단계', hole=0.4, color_discrete_sequence=px.colors.qualitative.Pastel)
             st.plotly_chart(fig6, use_container_width=True)
 
-        r4_c1, r4_c2 = st.columns(2)
-        with r4_c1:
-            # 흡연 여부와 중간 깸(각성) 횟수
-            fig7 = px.histogram(df_eff, x='각성횟수', color='흡연여부', barmode='group',
-                                title="흡연 여부에 따른 수면 중 각성(깸) 횟수 분포")
+        st.markdown("---")
+
+        col_eff3, col_eff4 = st.columns(2)
+        with col_eff3:
+            st.subheader("🚬 흡연 여부와 각성 횟수")
+            avg_awake = df2.groupby('흡연여부')['각성횟수'].mean().reset_index()
+            fig7 = px.bar(avg_awake, x='흡연여부', y='각성횟수', color='흡연여부', text_auto='.1f')
             st.plotly_chart(fig7, use_container_width=True)
-            
-        with r4_c2:
-            # 운동 빈도와 깊은 수면 비율
-            fig8 = px.scatter(df_eff, x='운동빈도', y='깊은수면_비율', 
-                              color='수면효율', color_continuous_scale='Viridis',
-                              title="주당 운동 빈도가 깊은 수면(Deep Sleep)에 미치는 영향")
+
+        with col_eff4:
+            st.subheader("🏃 주당 운동 빈도와 깊은 수면")
+            # 운동 횟수에 따른 평균 깊은 수면 비율을 막대로 표시
+            avg_deep = df2.groupby('운동빈도')['깊은수면비율'].mean().reset_index()
+            fig8 = px.bar(avg_deep, x='운동빈도', y='깊은수면비율', text_auto='.1f',
+                          color='깊은수면비율', color_continuous_scale='Greens')
             st.plotly_chart(fig8, use_container_width=True)
 
-# ==========================================
-# 5. 원본 데이터 확인 (하단 토글)
-# ==========================================
-st.markdown("---")
-with st.expander("📁 원본 데이터 테이블 보기"):
-    st.markdown("**1. Lifestyle 데이터셋 (`Sleep_health_and_lifestyle_dataset.csv`)**")
-    if not df_life.empty:
-        st.dataframe(df_life, use_container_width=True)
-    
-    st.markdown("**2. Sleep Efficiency 데이터셋 (`Sleep_Efficiency.csv`)**")
-    if not df_eff.empty:
-        st.dataframe(df_eff, use_container_width=True)
+else:
+    st.error("데이터 파일을 찾을 수 없습니다. 파일명을 확인해 주세요.")
