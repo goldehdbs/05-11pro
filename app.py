@@ -16,6 +16,21 @@ st.set_page_config(
 # ==========================================
 # 2. 데이터 로드 및 전처리
 # ==========================================
+# 혈압 수치(예: 120/80)를 4단계 카테고리로 분류하는 함수
+def categorize_bp(bp_str):
+    try:
+        sys, dia = map(int, str(bp_str).split('/'))
+        if sys < 120 and dia < 80:
+            return '정상혈압'
+        elif 120 <= sys < 130 and dia < 80:
+            return '주의혈압'
+        elif 130 <= sys < 140 or 80 <= dia < 90:
+            return '고혈압 전단계'
+        else:
+            return '고혈압'
+    except:
+        return '기타'
+
 @st.cache_data
 def load_data_1():
     file_path = 'Sleep_health_and_lifestyle_dataset.csv'
@@ -23,6 +38,9 @@ def load_data_1():
         return pd.DataFrame()
         
     df = pd.read_csv(file_path)
+    
+    # 혈압 데이터 카테고리화 적용
+    df['Blood Pressure'] = df['Blood Pressure'].apply(categorize_bp)
     
     # 카테고리 한글 변환
     df['BMI Category'] = df['BMI Category'].replace({'Normal Weight': '정상', 'Normal': '정상', 'Overweight': '과체중', 'Obese': '비만'})
@@ -101,7 +119,7 @@ if df1.empty and df2.empty:
 tab1, tab2 = st.tabs(["📉 라이프스타일 분석 (생활 습관)", "💤 수면 효율 분석 (외부 요인)"])
 
 # ------------------------------------------
-# 탭 1: 생활 습관 (중복 제거 및 동적 차트 통합)
+# 탭 1: 생활 습관
 # ------------------------------------------
 with tab1:
     if df1.empty:
@@ -116,36 +134,32 @@ with tab1:
         
         st.markdown("---")
         
-        # [핵심 동적 요소] 선택에 따라 차트가 바뀌어 중복을 없앰
         st.subheader("🎯 맞춤형 수면시간 & 수면의 질 분석")
         
         col_sel1, col_sel2 = st.columns([1, 3])
         with col_sel1:
-            # 사용자가 원하는 분석 기준 선택
             target_category = st.radio(
                 "어떤 기준으로 분석할까요?",
-                options=['직업', 'BMI분류', '스트레스지수', '혈압'], # 혈압 추가됨
+                options=['직업', 'BMI분류', '스트레스지수', '혈압'],
                 index=0
             )
         
         with col_sel2:
-            # 선택된 기준에 따라 동적으로 데이터 집계
             avg_dynamic = df1.groupby(target_category)[['수면시간', '수면의질']].mean().reset_index()
             
-            # 스트레스나 혈압 등은 정렬을 맞춰주면 보기 편함
-            if target_category in ['스트레스지수']:
-                avg_dynamic = avg_dynamic.sort_values(target_category)
+            # 그래프 가독성을 위한 정렬 처리
+            if target_category == '스트레스지수':
+                avg_dynamic = avg_dynamic.sort_values(target_category, ascending=False)
                 avg_dynamic[target_category] = avg_dynamic[target_category].astype(str) + "점"
-            elif target_category == '혈압':
-                # 수면시간 순으로 정렬하여 보기 좋게 만듦
-                avg_dynamic = avg_dynamic.sort_values('수면시간', ascending=False)
             else:
-                avg_dynamic = avg_dynamic.sort_values('수면시간', ascending=False)
+                # Plotly 가로 막대 그래프는 ascending=True 여야 가장 긴 막대가 위에 옴
+                avg_dynamic = avg_dynamic.sort_values('수면시간', ascending=True)
 
-            fig_dyn = px.bar(avg_dynamic, x=target_category, y='수면시간', 
+            # [수정됨] x축과 y축을 반전시켜 그래프를 옆으로 눕힘 (orientation='h')
+            fig_dyn = px.bar(avg_dynamic, x='수면시간', y=target_category, orientation='h',
                              color='수면의질', text_auto='.1f', color_continuous_scale='Blues',
                              title=f"[{target_category}]에 따른 평균 수면 시간 (색상: 수면의 질)")
-            fig_dyn.update_layout(yaxis_title="평균 수면 시간 (h)")
+            fig_dyn.update_layout(xaxis_title="평균 수면 시간 (h)", yaxis_title="")
             st.plotly_chart(fig_dyn, use_container_width=True)
 
         st.markdown("---")
@@ -157,7 +171,7 @@ with tab1:
         st.plotly_chart(fig3, use_container_width=True)
 
 # ------------------------------------------
-# 탭 2: 수면 효율 (중복 제거 및 동적 차트 통합)
+# 탭 2: 수면 효율
 # ------------------------------------------
 with tab2:
     if df2.empty:
@@ -181,7 +195,6 @@ with tab2:
             st.plotly_chart(fig6, use_container_width=True)
             
         with col_eff2:
-            # 동적 선택 라인 그래프
             st.subheader("⚡ 외부 요인별 수면 효율 분석")
             factor = st.selectbox("분석할 외부 요인을 선택하세요:", ['알코올', '운동빈도'], index=0)
             
