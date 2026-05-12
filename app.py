@@ -53,7 +53,6 @@ def load_data_2():
     
     df['Smoking status'] = df['Smoking status'].replace({'Yes': '흡연', 'No': '비흡연'})
     
-    # [수정됨] 'Smoking status': '흡연여부' 맵핑이 추가되었습니다!
     return df.rename(columns={
         'Sleep efficiency': '수면효율', 'REM sleep percentage': 'REM비율', 
         'Deep sleep percentage': '깊은수면비율', 'Light sleep percentage': '얕은수면비율', 
@@ -74,7 +73,7 @@ except Exception as e:
 # 3. 메인 UI 구성
 # ==========================================
 st.title("📊 수면 건강 핵심 데이터 대시보드")
-st.markdown("복잡한 산점도 대신 **막대그래프**를 사용하여 주요 수치를 직관적으로 비교합니다.")
+st.markdown("복잡한 산점도 대신 **막대/라인 그래프**를 사용하여 주요 수치를 직관적으로 비교합니다.")
 
 # CSV 파일이 둘 다 없을 경우 경고 표시 후 정지
 if df1.empty and df2.empty:
@@ -143,9 +142,14 @@ with tab2:
         
         with col_eff1:
             st.subheader("🍺 알코올 섭취량별 수면 효율")
+            # 라인 그래프로 변경
             avg_eff = df2.groupby('알코올')['수면효율'].mean().reset_index()
-            avg_eff['수면효율'] = avg_eff['수면효율'] * 100
-            fig5 = px.bar(avg_eff, x='알코올', y='수면효율', text_auto='.1f', labels={'알코올': '음주량', '수면효율': '수면 효율 (%)'}, color='수면효율', color_continuous_scale='Purples')
+            avg_eff['수면효율'] = (avg_eff['수면효율'] * 100).round(1)
+            
+            fig5 = px.line(avg_eff, x='알코올', y='수면효율', markers=True, text='수면효율',
+                           labels={'알코올': '음주량', '수면효율': '수면 효율 (%)'})
+            fig5.update_traces(textposition="top center", line_color="#8b5cf6", marker=dict(size=10)) # 보라색 라인 테마
+            fig5.update_yaxes(range=[avg_eff['수면효율'].min() - 5, avg_eff['수면효율'].max() + 5]) # Y축 범위 넉넉하게 설정
             st.plotly_chart(fig5, use_container_width=True)
 
         with col_eff2:
@@ -165,6 +169,12 @@ with tab2:
 
         with col_eff4:
             st.subheader("🏃 주당 운동 빈도와 깊은 수면")
+            # 라인 그래프로 변경
             avg_deep = df2.groupby('운동빈도')['깊은수면비율'].mean().reset_index()
-            fig8 = px.bar(avg_deep, x='운동빈도', y='깊은수면비율', text_auto='.1f', color='깊은수면비율', color_continuous_scale='Greens')
+            avg_deep['깊은수면비율'] = avg_deep['깊은수면비율'].round(1)
+            
+            fig8 = px.line(avg_deep, x='운동빈도', y='깊은수면비율', markers=True, text='깊은수면비율',
+                           labels={'운동빈도': '주당 운동 횟수(회)', '깊은수면비율': '깊은 수면 비율 (%)'})
+            fig8.update_traces(textposition="top center", line_color="#10b981", marker=dict(size=10)) # 초록색 라인 테마
+            fig8.update_yaxes(range=[avg_deep['깊은수면비율'].min() - 5, avg_deep['깊은수면비율'].max() + 5]) # Y축 범위 설정
             st.plotly_chart(fig8, use_container_width=True)
