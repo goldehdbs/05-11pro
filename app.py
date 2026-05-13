@@ -378,7 +378,7 @@ with tab5:
             bedtime_dt = wakeup_dt - timedelta(hours=recommended_duration)
             
             st.metric("권장 총 수면 시간", f"{recommended_duration:.1f}시간")
-            st.markdown(f"### 🌙 권장 취침 시각: <span style='color:#2563eb;'>{bedtime_dt.strftime('%H시 %M분')}</span>", unsafe_allow_html=True)
+            st.markdown(f"###  권장 취침 시각: <span style='color:#2563eb;'>{bedtime_dt.strftime('%H시 %M분')}</span>", unsafe_allow_html=True)
             
             if is_smoking or has_coffee:
                 st.write("**전문가 팁:** 니코틴과 카페인은 깊은 수면 비중을 감소시키므로 평소보다 어두운 환경 조성이 필요합니다.")
